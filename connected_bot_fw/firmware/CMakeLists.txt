@@ -10,6 +10,7 @@ generate_arduino_firmware(connected_bot_fw
   SRCS main.cpp ${ROS_LIB_DIR}/time.cpp lib/DistanceSensor.cpp
   lib/SparkFun_RedBot_Arduino_Library/src/RedBotEncoder.cpp
   lib/SparkFun_RedBot_Arduino_Library/src/RedBot.cpp
+  lib/SparkFun_RedBot_Arduino_Library/src/RedBotMotors.cpp
   BOARD uno
   PORT /dev/ttyUSB0
 )
