@@ -59,7 +59,7 @@ class CalibrateCamera():
 
         return undist
 
-    def write(self, filename='obj_save/CameraCalibration.p'):
+    def write(self, filename='data/obj_save/CameraCalibration.p'):
         directory = os.path.dirname(filename)
 
         if not os.path.exists(directory):
@@ -69,7 +69,7 @@ class CalibrateCamera():
             pickle.dump(self, pf)
 
     @staticmethod
-    def load(filename='obj_save/CameraCalibration.p'):
+    def load(filename='data/obj_save/CameraCalibration.p'):
         loaded = None
         if os.path.isfile(filename):
             with open(filename, 'rb') as pf:

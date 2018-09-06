@@ -2,7 +2,7 @@
     <param name="joy_node/dev" value="/dev/input/js0"/>
     <node pkg="joy" type="joy_node" name="joy"/>
     <node pkg="connected_bot_app" type="joystick_node.py" name="joystick_node"/>
-    <node pkg="connected_bot_app" type="show_robot_camera_node.py" name="show_robot_camera_node"/>    
+    <node pkg="connected_bot_app" type="show_robot_camera_node.py" name="show_robot_camera_node" cwd="node"/>
     
     <group>
         <machine name="raspi" address="raspi" env-loader="~/.ros_setup.sh" default="true"/>
