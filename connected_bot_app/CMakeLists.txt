@@ -1,6 +1,17 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(connected_bot_app)
 
+# SET(OpenCV_DIR=/usr/share/OpenCV/)
+# SET(OpenCV_INCLUDE_DIRS "/usr/include/opencv;/usr/include/opencv2")
+# INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
+
+# SET(OpenCV_LIB_DIR "/usr/lib")
+
+# LINK_DIRECTORIES(${OpenCV_LIB_DIR})
+
+find_package(OpenCV REQUIRED)
+include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS})
+
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
 
@@ -13,6 +24,9 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   sensor_msgs
   std_msgs
+  cv_bridge
+  image_transport
+  OpenCV
 )
 
 ## System dependencies are found with CMake's conventions
@@ -135,7 +149,8 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/connected_bot_app_node.cpp)
+add_executable(show_robot_camera_node src/show_robot_camera_node.cpp)
+target_link_libraries(show_robot_camera_node ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
