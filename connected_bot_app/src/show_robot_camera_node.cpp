@@ -18,31 +18,44 @@ void sensorCallback(const std_msgs::Float32MultiArray& msg) {
   }
 }
 
+void processImage(cv::Mat& img) {
+  // Canny edge detection
+  cv::Mat img_gray;
+  cv::cvtColor(img, img_gray, cv::COLOR_BGR2GRAY);
+  Canny(img_gray, img_gray, 100, 200, 3);
+  cv::Mat img_edges;
+  cv::cvtColor(img_gray, img_edges, cv::COLOR_GRAY2BGR);
+
+  // merge edges and image
+  addWeighted(img, 0.2, img_edges, 0.8, 0.0, img);
+
+  // visualize the ir distance measurements as circles in the image
+  int ref_val =
+      std::max(1, (int)(80. * 40. / (sensor_meas[2] * sensor_meas[2])));
+  circle(img, cv::Point(320, 20), ref_val, cv::Scalar(0, 0, 255), cv::FILLED,
+         cv::LINE_8);
+
+  ref_val = std::max(1, (int)(80. * 40. / (sensor_meas[1] * sensor_meas[1])));
+  circle(img, cv::Point(20, 20), ref_val, cv::Scalar(0, 0, 255), cv::FILLED,
+         cv::LINE_8);
+
+  ref_val = std::max(1, (int)(80. * 40. / (sensor_meas[3] * sensor_meas[3])));
+  circle(img, cv::Point(620, 20), ref_val, cv::Scalar(0, 0, 255), cv::FILLED,
+         cv::LINE_8);
+
+  ref_val = std::max(1, (int)(80. * 40. / (sensor_meas[0] * sensor_meas[0])));
+  circle(img, cv::Point(20, 300), ref_val, cv::Scalar(0, 0, 255), cv::FILLED,
+         cv::LINE_8);
+
+  ref_val = std::max(1, (int)(80. * 40. / (sensor_meas[4] * sensor_meas[4])));
+  circle(img, cv::Point(620, 300), ref_val, cv::Scalar(0, 0, 255), cv::FILLED,
+         cv::LINE_8);
+}
+
 void imageCallback(const sensor_msgs::CompressedImageConstPtr& msg) {
   cv::Mat img = cv::imdecode(cv::Mat(msg->data), 1);
 
-  // visualize the ir distance measurements as circles in the image
-  int ref_val = std::max(1, (int)(80. * 40. / (sensor_meas[2] * sensor_meas[2])));
-  circle(img, cv::Point(320, 20), ref_val,
-          cv::Scalar(0, 0, 255), cv::FILLED, cv::LINE_8);
-
-  ref_val = std::max(1, (int)(80. * 40. / (sensor_meas[1] * sensor_meas[1])));
-  circle(img, cv::Point(20, 20), ref_val,
-          cv::Scalar(0, 0, 255), cv::FILLED, cv::LINE_8);
-
-  ref_val = std::max(1, (int)(80. * 40. / (sensor_meas[3] * sensor_meas[3])));
-  circle(img, cv::Point(620, 20), ref_val,
-          cv::Scalar(0, 0, 255), cv::FILLED, cv::LINE_8);
-
-  ref_val = std::max(1, (int)(80. * 40. / (sensor_meas[0] * sensor_meas[0])));
-  circle(img, cv::Point(20, 300), ref_val,
-          cv::Scalar(0, 0, 255), cv::FILLED, cv::LINE_8);
-
-  ref_val = std::max(1, (int)(80. * 40. / (sensor_meas[4] * sensor_meas[4])));
-  circle(img, cv::Point(620, 300), ref_val,
-          cv::Scalar(0, 0, 255), cv::FILLED, cv::LINE_8);
-
-  
+  processImage(img);
 
   cv::imshow("robot_camera_viewer", img);
   cv::waitKey(1);
