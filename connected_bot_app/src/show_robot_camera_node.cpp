@@ -19,6 +19,7 @@ void sensorCallback(const std_msgs::Float32MultiArray& msg) {
 }
 
 void processImage(cv::Mat& img) {
+#if 0
   // Canny edge detection
   cv::Mat img_gray;
   cv::cvtColor(img, img_gray, cv::COLOR_BGR2GRAY);
@@ -28,6 +29,8 @@ void processImage(cv::Mat& img) {
 
   // merge edges and image
   addWeighted(img, 0.2, img_edges, 0.8, 0.0, img);
+#endif
+  // img = img * 5;
 
   // visualize the ir distance measurements as circles in the image
   int ref_val =
@@ -65,11 +68,17 @@ int main(int argc, char** argv) {
   ros::init(argc, argv, "robot_camera_viewer");
   ros::NodeHandle nh;
 
+  // default camera topic
+  std::string image_topic;
+  ros::param::param<std::string>("~image_topic", image_topic,
+                                 "/raspi_camera/image_raw/compressed");
+
+  ROS_INFO_STREAM("Camera topic: " + image_topic);
+
   cv::namedWindow("robot_camera_viewer");
 
-  ros::Subscriber sub =
-      nh.subscribe("/webcam/image_raw/compressed", 1, imageCallback);
-
+  // subscriber for camera and IR sensors
+  ros::Subscriber sub = nh.subscribe(image_topic, 1, imageCallback);
   ros::Subscriber sub_ir = nh.subscribe("/sensor/ir", 1, sensorCallback);
 
   ros::spin();
