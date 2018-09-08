@@ -5,7 +5,8 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/opt/ros/melodic/include/**",
-                "/usr/share/arduino/**"
+                "/usr/share/arduino/**",
+                "${workspaceFolder}/../devel/include/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",

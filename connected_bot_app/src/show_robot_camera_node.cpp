@@ -7,18 +7,31 @@
 
 #include <vector>
 
-constexpr size_t NUM_IR_SENSORS = 5;
-std::vector<float> sensor_meas(NUM_IR_SENSORS);
+#include <actionlib/server/simple_action_server.h>
+#include <connected_bot_app/photoAction.h>
 
-void sensorCallback(const std_msgs::Float32MultiArray& msg) {
+#include "show_robot_camera_node.h"
+
+
+void ShowRobotCamera::sensorCallback(const std_msgs::Float32MultiArray& msg) {
   for (auto i = 0u; i < NUM_IR_SENSORS; i++) {
-    // std::cout << msg.data[i] << " ";
     constexpr float fac = 0.7;
-    sensor_meas[i] = fac * sensor_meas[i] + (1. - fac) * msg.data[i];
+    sensor_meas_[i] = fac * sensor_meas_[i] + (1. - fac) * msg.data[i];
   }
 }
 
-void processImage(cv::Mat& img) {
+void ShowRobotCamera::photoActionCb(
+    const connected_bot_app::photoGoalConstPtr& goal) {
+  ROS_INFO("Action: photoAction");
+  
+  result_.photo_done = 1;
+  as_.setSucceeded(result_);  
+  save_photo_ = true;
+
+  // as_.publishFeedback(feedback_);
+}
+
+void ShowRobotCamera::processImage(cv::Mat& img) {
 #if 0
   // Canny edge detection
   cv::Mat img_gray;
@@ -34,31 +47,41 @@ void processImage(cv::Mat& img) {
 
   // visualize the ir distance measurements as circles in the image
   int ref_val =
-      std::max(1, (int)(80. * 40. / (sensor_meas[2] * sensor_meas[2])));
+      std::max(1, (int)(80. * 40. / (sensor_meas_[2] * sensor_meas_[2])));
   circle(img, cv::Point(320, 20), ref_val, cv::Scalar(0, 0, 255), cv::FILLED,
          cv::LINE_8);
 
-  ref_val = std::max(1, (int)(80. * 40. / (sensor_meas[1] * sensor_meas[1])));
+  ref_val = std::max(1, (int)(80. * 40. / (sensor_meas_[1] * sensor_meas_[1])));
   circle(img, cv::Point(20, 20), ref_val, cv::Scalar(0, 0, 255), cv::FILLED,
          cv::LINE_8);
 
-  ref_val = std::max(1, (int)(80. * 40. / (sensor_meas[3] * sensor_meas[3])));
+  ref_val = std::max(1, (int)(80. * 40. / (sensor_meas_[3] * sensor_meas_[3])));
   circle(img, cv::Point(620, 20), ref_val, cv::Scalar(0, 0, 255), cv::FILLED,
          cv::LINE_8);
 
-  ref_val = std::max(1, (int)(80. * 40. / (sensor_meas[0] * sensor_meas[0])));
+  ref_val = std::max(1, (int)(80. * 40. / (sensor_meas_[0] * sensor_meas_[0])));
   circle(img, cv::Point(20, 300), ref_val, cv::Scalar(0, 0, 255), cv::FILLED,
          cv::LINE_8);
 
-  ref_val = std::max(1, (int)(80. * 40. / (sensor_meas[4] * sensor_meas[4])));
+  ref_val = std::max(1, (int)(80. * 40. / (sensor_meas_[4] * sensor_meas_[4])));
   circle(img, cv::Point(620, 300), ref_val, cv::Scalar(0, 0, 255), cv::FILLED,
          cv::LINE_8);
 }
 
-void imageCallback(const sensor_msgs::CompressedImageConstPtr& msg) {
+void ShowRobotCamera::imageCallback(
+    const sensor_msgs::CompressedImageConstPtr& msg) {
+  static int fn_nr = 1;
   cv::Mat img = cv::imdecode(cv::Mat(msg->data), 1);
 
   processImage(img);
+
+  if (save_photo_) {
+    ROS_INFO("Saved photo");
+    std::string fn = std::to_string(fn_nr++) + ".jpg";
+    cv::imwrite(
+        "/home/arthur/catkin_ws/src/connected_bot_app/data/images/" + fn, img);
+    save_photo_ = false;
+  }
 
   cv::imshow("robot_camera_viewer", img);
   cv::waitKey(1);
@@ -66,7 +89,6 @@ void imageCallback(const sensor_msgs::CompressedImageConstPtr& msg) {
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "robot_camera_viewer");
-  ros::NodeHandle nh;
 
   // default camera topic
   std::string image_topic;
@@ -77,9 +99,7 @@ int main(int argc, char** argv) {
 
   cv::namedWindow("robot_camera_viewer");
 
-  // subscriber for camera and IR sensors
-  ros::Subscriber sub = nh.subscribe(image_topic, 1, imageCallback);
-  ros::Subscriber sub_ir = nh.subscribe("/sensor/ir", 1, sensorCallback);
+  ShowRobotCamera showRobotCamera("/make_photo", image_topic);
 
   ros::spin();
 

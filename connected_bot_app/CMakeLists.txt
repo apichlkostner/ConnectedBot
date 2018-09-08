@@ -1,16 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(connected_bot_app)
 
-# SET(OpenCV_DIR=/usr/share/OpenCV/)
-# SET(OpenCV_INCLUDE_DIRS "/usr/include/opencv;/usr/include/opencv2")
-# INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
-
-# SET(OpenCV_LIB_DIR "/usr/lib")
-
-# LINK_DIRECTORIES(${OpenCV_LIB_DIR})
 
 find_package(OpenCV REQUIRED)
-include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS})
+include_directories(${catkin_INCLUDE_DIRS}  ${OpenCV_INCLUDE_DIRS} ./include)
+
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -27,6 +21,9 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   image_transport
   OpenCV
+  actionlib_msgs
+  genmsg
+  actionlib
 )
 
 ## System dependencies are found with CMake's conventions
@@ -77,17 +74,14 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
+add_action_files(
+  DIRECTORY action FILES photo.action
+)
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   geometry_msgs#   sensor_msgs#   std_msgs
-# )
+generate_messages(
+  DEPENDENCIES actionlib_msgs std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -119,10 +113,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES connected_bot_app
-#  CATKIN_DEPENDS geometry_msgs roscpp rospy sensor_msgs std_msgs
-#  DEPENDS system_lib
+  INCLUDE_DIRS include
+  LIBRARIES connected_bot_app
+  CATKIN_DEPENDS geometry_msgs roscpp rospy sensor_msgs std_msgs actionlib_msgs
+  DEPENDS system_lib
 )
 
 ###########
