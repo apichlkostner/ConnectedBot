@@ -4,6 +4,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/opencv.hpp>
 
 #include <vector>
 
@@ -11,7 +12,6 @@
 #include <connected_bot_app/photoAction.h>
 
 #include "show_robot_camera_node.h"
-
 
 void ShowRobotCamera::sensorCallback(const std_msgs::Float32MultiArray& msg) {
   for (auto i = 0u; i < NUM_IR_SENSORS; i++) {
@@ -23,12 +23,24 @@ void ShowRobotCamera::sensorCallback(const std_msgs::Float32MultiArray& msg) {
 void ShowRobotCamera::photoActionCb(
     const connected_bot_app::photoGoalConstPtr& goal) {
   ROS_INFO("Action: photoAction");
-  
+
   result_.photo_done = 1;
-  as_.setSucceeded(result_);  
+  as_.setSucceeded(result_);
   save_photo_ = true;
 
   // as_.publishFeedback(feedback_);
+}
+
+void ShowRobotCamera::undistort(cv::Mat& img) {
+  cv::Mat map1 = cv::Mat::zeros(3, 3, CV_32F);
+  cv::Mat map2 = cv::Mat::zeros(4, 1, CV_32F);
+  cv::Mat new_K;
+
+  cv::fisheye::estimateNewCameraMatrixForUndistortRectify(K_, D_, img.size(), identity_, new_K, 0.4);
+
+  cv::fisheye::initUndistortRectifyMap(
+      K_, D_, identity_, new_K, img.size(), CV_32F, map1, map2);
+  cv::remap(img, img, map1, map2, cv::INTER_LINEAR, cv::BORDER_CONSTANT);
 }
 
 void ShowRobotCamera::processImage(cv::Mat& img) {
@@ -43,12 +55,12 @@ void ShowRobotCamera::processImage(cv::Mat& img) {
   // merge edges and image
   addWeighted(img, 0.2, img_edges, 0.8, 0.0, img);
 #endif
-  // img = img * 5;
 
+  undistort(img);
   // visualize the ir distance measurements as circles in the image
   int ref_val =
       std::max(1, (int)(80. * 40. / (sensor_meas_[2] * sensor_meas_[2])));
-  circle(img, cv::Point(320, 20), ref_val, cv::Scalar(0, 0, 255), cv::FILLED,
+  circle(img, cv::Point(320, 460), ref_val, cv::Scalar(0, 0, 255), cv::FILLED,
          cv::LINE_8);
 
   ref_val = std::max(1, (int)(80. * 40. / (sensor_meas_[1] * sensor_meas_[1])));
@@ -60,11 +72,11 @@ void ShowRobotCamera::processImage(cv::Mat& img) {
          cv::LINE_8);
 
   ref_val = std::max(1, (int)(80. * 40. / (sensor_meas_[0] * sensor_meas_[0])));
-  circle(img, cv::Point(20, 300), ref_val, cv::Scalar(0, 0, 255), cv::FILLED,
+  circle(img, cv::Point(20, 350), ref_val, cv::Scalar(0, 0, 255), cv::FILLED,
          cv::LINE_8);
 
   ref_val = std::max(1, (int)(80. * 40. / (sensor_meas_[4] * sensor_meas_[4])));
-  circle(img, cv::Point(620, 300), ref_val, cv::Scalar(0, 0, 255), cv::FILLED,
+  circle(img, cv::Point(620, 350), ref_val, cv::Scalar(0, 0, 255), cv::FILLED,
          cv::LINE_8);
 }
 
@@ -73,8 +85,6 @@ void ShowRobotCamera::imageCallback(
   static int fn_nr = 1;
   cv::Mat img = cv::imdecode(cv::Mat(msg->data), 1);
 
-  processImage(img);
-
   if (save_photo_) {
     ROS_INFO("Saved photo");
     std::string fn = std::to_string(fn_nr++) + ".jpg";
@@ -82,6 +92,8 @@ void ShowRobotCamera::imageCallback(
         "/home/arthur/catkin_ws/src/connected_bot_app/data/images/" + fn, img);
     save_photo_ = false;
   }
+
+  processImage(img);
 
   cv::imshow("robot_camera_viewer", img);
   cv::waitKey(1);
