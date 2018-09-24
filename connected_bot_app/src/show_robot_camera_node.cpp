@@ -13,6 +13,23 @@
 
 #include "show_robot_camera_node.h"
 
+ShowRobotCamera::ShowRobotCamera(std::string name, std::string image_topic)
+    : as_(nh_, name, boost::bind(&ShowRobotCamera::photoActionCb, this, _1),
+          false),
+      action_name_(name),
+      sensor_meas_(NUM_IR_SENSORS) {
+  D_ = (cv::Mat_<double>(4, 1) << -0.03213332, 0.02991439, -0.07085706,
+        0.04153998);
+  K_ = (cv::Mat_<double>(3, 3) << 331.46297565, 0., 305.05513925, 0.,
+        330.99605545, 225.88179462, 0., 0., 1.);
+  // std::cout << "D = " << D_ << "\nK = " << K_ << std::endl;
+  identity_ = cv::Mat::eye(3, 3, CV_64F);
+  sub_ = nh_.subscribe(image_topic, 1, &ShowRobotCamera::imageCallback, this);
+  sub_ir_ =
+      nh_.subscribe("/sensor/ir", 1, &ShowRobotCamera::sensorCallback, this);
+  as_.start();
+}
+
 void ShowRobotCamera::sensorCallback(const std_msgs::Float32MultiArray& msg) {
   for (auto i = 0u; i < NUM_IR_SENSORS; i++) {
     constexpr float fac = 0.7;
@@ -36,10 +53,11 @@ void ShowRobotCamera::undistort(cv::Mat& img) {
   cv::Mat map2 = cv::Mat::zeros(4, 1, CV_32F);
   cv::Mat new_K;
 
-  cv::fisheye::estimateNewCameraMatrixForUndistortRectify(K_, D_, img.size(), identity_, new_K, 0.4);
+  cv::fisheye::estimateNewCameraMatrixForUndistortRectify(
+      K_, D_, img.size(), identity_, new_K, 0.4);
 
-  cv::fisheye::initUndistortRectifyMap(
-      K_, D_, identity_, new_K, img.size(), CV_32F, map1, map2);
+  cv::fisheye::initUndistortRectifyMap(K_, D_, identity_, new_K, img.size(),
+                                       CV_32F, map1, map2);
   cv::remap(img, img, map1, map2, cv::INTER_LINEAR, cv::BORDER_CONSTANT);
 }
 
@@ -56,7 +74,9 @@ void ShowRobotCamera::processImage(cv::Mat& img) {
   addWeighted(img, 0.2, img_edges, 0.8, 0.0, img);
 #endif
 
+  // image undistortion
   undistort(img);
+  
   // visualize the ir distance measurements as circles in the image
   int ref_val =
       std::max(1, (int)(80. * 40. / (sensor_meas_[2] * sensor_meas_[2])));
@@ -83,8 +103,11 @@ void ShowRobotCamera::processImage(cv::Mat& img) {
 void ShowRobotCamera::imageCallback(
     const sensor_msgs::CompressedImageConstPtr& msg) {
   static int fn_nr = 1;
+
+  // decode compressed image
   cv::Mat img = cv::imdecode(cv::Mat(msg->data), 1);
 
+  // save photo can be triggered by action
   if (save_photo_) {
     ROS_INFO("Saved photo");
     std::string fn = std::to_string(fn_nr++) + ".jpg";
@@ -93,27 +116,17 @@ void ShowRobotCamera::imageCallback(
     save_photo_ = false;
   }
 
+  // process the image
   processImage(img);
 
-  cv::imshow("robot_camera_viewer", img);
-  cv::waitKey(1);
+  // send to viewer thread
+  emit newImageReady(QPixmap::fromImage(
+      QImage(img.data, img.cols, img.rows, img.step, QImage::Format_RGB888)
+          .rgbSwapped()));
 }
 
-int main(int argc, char** argv) {
+void ShowRobotCamera::init(int argc, char** argv) {
   ros::init(argc, argv, "robot_camera_viewer");
-
-  // default camera topic
-  std::string image_topic;
-  ros::param::param<std::string>("~image_topic", image_topic,
-                                 "/raspi_camera/image_raw/compressed");
-
-  ROS_INFO_STREAM("Camera topic: " + image_topic);
-
-  cv::namedWindow("robot_camera_viewer");
-
-  ShowRobotCamera showRobotCamera("/make_photo", image_topic);
-
-  ros::spin();
-
-  cv::destroyWindow("robot_camera_viewer");
 }
+
+void ShowRobotCamera::run() { ros::spin(); }
