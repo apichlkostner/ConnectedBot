@@ -34,6 +34,9 @@ Offline fish eye camera calibration in CameraCalibration.py
 
 Values are manually copied to viewer node code.
 
+![connected robot](../docu/chessboard.jpg)
+![connected robot](../docu/chessboard_undist.jpg)
+
 ### Camera image viewer script
 
 Python script show_robot_camera_node.py
