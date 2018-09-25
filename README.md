@@ -2,6 +2,10 @@
 
 Robot based on https://github.com/apichlkostner/robot
 
+Additional HW: Raspberry Pi 3, fish eye camera
+
+![connected robot](docu/connectedrobot.jpg)
+
 ## HW nodes
 
 * Desktop PC
