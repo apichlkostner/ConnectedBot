@@ -1,48 +1,45 @@
 #include "mainwindow.h"
 #include <QApplication>
-#include "ui_mainwindow.h"
 #include <QDebug>
+#include "ui_mainwindow.h"
 
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent), ui(new Ui::MainWindow), showRobotCamera() {
+  ui->setupUi(this);
+  ui->graphicsView->setScene(&scene);
+  ui->statusBar->showMessage(QString::fromStdString(showRobotCamera.image_topic_name()));
 
-MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow),
-    showRobotCamera("/make_photo", "/raspi_camera/image_raw/compressed")
-{
-    // todo: showRobotCamera parameter should be configurable as in previous version
-    ui->setupUi(this);
-    ui->graphicsView->setScene(&scene);
+  // connect event loop with signal from ROS node ROS node has NO Qt event loop
+  // but a ROS event loop
+  connect(&showRobotCamera, &ShowRobotCamera::newImageReady, this,
+          &MainWindow::showImage);
 
-    connect(&showRobotCamera, 
-            SIGNAL(newImageReady(QPixmap)),
-            this, 
-            SLOT(newImageReady(QPixmap)));
-    showRobotCamera.start();
+  // ROS node will run as separate thread without Qt event loop but it emits
+  // singals
+  showRobotCamera.start();
 }
 
-MainWindow::~MainWindow()
-{
-    delete ui;
+MainWindow::~MainWindow() {
+  delete ui;
+  showRobotCamera.quit();
+  showRobotCamera.wait();
 }
 
-void MainWindow::newImageReady(QPixmap pixmap)
-{
-    scene.clear();
-    scene.addPixmap(pixmap);
-    ui->graphicsView->fitInView(scene.itemsBoundingRect() ,Qt::KeepAspectRatio);
+void MainWindow::showImage(QPixmap pixmap) {
+  scene.clear();
+  scene.addPixmap(pixmap);
+  ui->graphicsView->fitInView(scene.itemsBoundingRect(), Qt::KeepAspectRatio);
 }
-
 
 /************************************************
  * main function
  ************************************************/
-int main(int argc, char *argv[])
-{
-    ShowRobotCamera::init(argc, argv);
-    QApplication a(argc, argv);
-    
-    MainWindow w;
-    w.show();
+int main(int argc, char *argv[]) {
+  ShowRobotCamera::init(argc, argv);
+  QApplication a(argc, argv);
 
-    return a.exec();
+  MainWindow w;
+  w.show();
+
+  return a.exec();
 }

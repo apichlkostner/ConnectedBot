@@ -6,7 +6,8 @@
                 "${workspaceFolder}/**",
                 "/opt/ros/melodic/include/**",
                 "/usr/share/arduino/**",
-                "${workspaceFolder}/../devel/include/**"
+                "/usr/include/x86_64-linux-gnu/qt5/**",
+                "${workspaceFolder}/../devel/include/**"                
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang",

@@ -27,12 +27,12 @@ public:
     ~MainWindow();
 
 public slots:
-    void newImageReady(QPixmap pixmap);
+    void showImage(QPixmap pixmap); //! shows the image on the main scene
 
 private:
-    Ui::MainWindow *ui;
-    QGraphicsScene scene;
-    ShowRobotCamera showRobotCamera;
+    Ui::MainWindow *ui;     //! main window ui
+    QGraphicsScene scene;   //! main scene to show processed camera image
+    ShowRobotCamera showRobotCamera;    //! ROS node which emits processed camera images
 };
 
 #endif // MAINWINDOW_H

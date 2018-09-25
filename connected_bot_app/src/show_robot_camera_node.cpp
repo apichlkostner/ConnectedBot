@@ -13,24 +13,36 @@
 
 #include "show_robot_camera_node.h"
 
-ShowRobotCamera::ShowRobotCamera(std::string name, std::string image_topic)
-    : as_(nh_, name, boost::bind(&ShowRobotCamera::photoActionCb, this, _1),
-          false),
-      action_name_(name),
+ShowRobotCamera::ShowRobotCamera()
+    : as_(nh_, "/make_photo",
+          boost::bind(&ShowRobotCamera::photoActionCb, this, _1), false),
+      action_name_("/make_photo"),
       sensor_meas_(NUM_IR_SENSORS) {
+  // parameter from calibration
   D_ = (cv::Mat_<double>(4, 1) << -0.03213332, 0.02991439, -0.07085706,
         0.04153998);
   K_ = (cv::Mat_<double>(3, 3) << 331.46297565, 0., 305.05513925, 0.,
         330.99605545, 225.88179462, 0., 0., 1.);
-  // std::cout << "D = " << D_ << "\nK = " << K_ << std::endl;
+
   identity_ = cv::Mat::eye(3, 3, CV_64F);
+
+  // default camera topic
+  std::string image_topic;
+  ros::param::param<std::string>("~image_topic", image_topic,
+                                 "/raspi_camera/image_raw/compressed");
+  ROS_INFO_STREAM("Camera topic: " + image_topic);
+
+  // subscribe topics
   sub_ = nh_.subscribe(image_topic, 1, &ShowRobotCamera::imageCallback, this);
   sub_ir_ =
       nh_.subscribe("/sensor/ir", 1, &ShowRobotCamera::sensorCallback, this);
+
+  // start action server (save photo from camera to file system)
   as_.start();
 }
 
 void ShowRobotCamera::sensorCallback(const std_msgs::Float32MultiArray& msg) {
+  // moving average over ir distance sensor measurements
   for (auto i = 0u; i < NUM_IR_SENSORS; i++) {
     constexpr float fac = 0.7;
     sensor_meas_[i] = fac * sensor_meas_[i] + (1. - fac) * msg.data[i];
@@ -71,12 +83,12 @@ void ShowRobotCamera::processImage(cv::Mat& img) {
   cv::cvtColor(img_gray, img_edges, cv::COLOR_GRAY2BGR);
 
   // merge edges and image
-  addWeighted(img, 0.2, img_edges, 0.8, 0.0, img);
+  addWeighted(img, 0.4, img_edges, 0.6, 0.0, img);
 #endif
 
   // image undistortion
   undistort(img);
-  
+
   // visualize the ir distance measurements as circles in the image
   int ref_val =
       std::max(1, (int)(80. * 40. / (sensor_meas_[2] * sensor_meas_[2])));
@@ -129,4 +141,17 @@ void ShowRobotCamera::init(int argc, char** argv) {
   ros::init(argc, argv, "robot_camera_viewer");
 }
 
-void ShowRobotCamera::run() { ros::spin(); }
+void ShowRobotCamera::run() {
+  ros::Rate loop_rate(60);
+
+  while (ros::ok() && !stop_thread_) {
+    ros::spinOnce();
+    loop_rate.sleep();
+  }
+}
+
+void ShowRobotCamera::quit() { stop_thread_ = true; }
+
+std::string ShowRobotCamera::image_topic_name() {
+  return sub_.getTopic();
+}
